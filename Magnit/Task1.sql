@@ -1,0 +1,139 @@
+/*
+  Задание №1 (Firebird 1.5)
+  В процедуре R_XMLCONVERTSTRING для конвертирования строки в формат XML и
+  обратно необходимо найти ошибки следующего типа —
+  ошибки компиляции и ошибки логики.
+*/
+
+DECLARE EXTERNAL FUNCTION CHR
+    SMALLINT
+RETURNS CSTRING(1)
+ENTRY_POINT 'fn_chr' MODULE_NAME 'rfunc';
+
+DECLARE EXTERNAL FUNCTION FLOATTOSTR
+    DOUBLE PRECISION,
+    CSTRING(255)                        
+RETURNS CSTRING(255) FREE_IT
+ENTRY_POINT 'fn_floattostr' MODULE_NAME 'rfunc';
+
+DECLARE EXTERNAL FUNCTION ORD
+    CSTRING(1)
+RETURNS SMALLINT BY VALUE
+ENTRY_POINT 'fn_ord' MODULE_NAME 'rfunc';
+
+DECLARE EXTERNAL FUNCTION STRLEN
+    CSTRING(16383)                                     
+RETURNS INTEGER BY VALUE
+ENTRY_POINT 'fn_strlen' MODULE_NAME 'rfunc';
+
+DECLARE EXTERNAL FUNCTION STRPOS
+    CSTRING(255),
+    CSTRING(16383)
+RETURNS INTEGER BY VALUE
+ENTRY_POINT 'fn_strpos' MODULE_NAME 'rfunc';
+
+DECLARE EXTERNAL FUNCTION STRREPLACE
+    CSTRING(255),
+    CSTRING(255),
+    CSTRING(255)
+RETURNS CSTRING(255) FREE_IT
+ENTRY_POINT 'fn_strreplace' MODULE_NAME 'rfunc';
+
+DECLARE EXTERNAL FUNCTION SUBSTR
+    CSTRING(255),
+    INTEGER,
+    INTEGER
+RETURNS CSTRING(255)
+ENTRY_POINT 'fn_substr' MODULE_NAME 'rfunc';
+
+CREATE OR ALTER PROCEDURE R_XMLCONVERTSTRING (
+    ASTR VARCHAR(255),
+    FLAGS VARCHAR(2))
+RETURNS (
+    TEXT VARCHAR(255))
+AS
+DECLARE VARIABLE CONVERTED VARCHAR(255);
+DECLARE VARIABLE HEXTABLE VARCHAR(16);
+DECLARE VARIABLE HEXPREFIX VARCHAR(3);
+DECLARE VARIABLE POSPREFIX INTEGER;
+DECLARE VARIABLE HEXCODE1 VARCHAR(1);
+DECLARE VARIABLE HEXCODE2 VARCHAR(1);
+DECLARE VARIABLE HEXCODE3 VARCHAR(1);
+DECLARE VARIABLE CURRENTPOS INTEGER;
+DECLARE VARIABLE TEXTSYMBOL VARCHAR(1);
+BEGIN
+  /* FLAGS:
+      T - из xml в текст
+      X - из текста в xml (по умолчанию)
+        e  - конвертирование непечатных символов
+  */
+  IF ( FLAGS IS NULL ) THEN FLAGS = 'X';
+  IF ( STRLEN( ASTR ) > 0 ) THEN
+  BEGIN
+    TEXT = '';
+    HEXPREFIX = '&#x';
+    IF ( SUBSTR( FLAGS, 1, 1 ) = 'T' ) THEN
+    BEGIN
+      CONVERTED = STRREPLACE( ASTR, '&amp;', '&' );
+      CONVERTED = STRREPLACE( CONVERTED, '&gt;', '>' );
+      CONVERTED = STRREPLACE( CONVERTED, '&lt;', '<' );
+      CONVERTED = STRREPLACE( CONVERTED, '&quot;', '"' );
+      CONVERTED = STRREPLACE( CONVERTED, '&apos;', '''' );
+
+      /*  &#xXX; Symbols (X in HEXTABLE)
+          Подстрока, несоответствующая шаблону, пропускается
+      */
+      HEXTABLE = '0123456789ABCDEF';
+      POSPREFIX = STRPOS( HEXPREFIX, CONVERTED );
+      WHILE ( POSPREFIX > 0 ) DO
+      BEGIN
+        HEXCODE1 = SUBSTR( CONVERTED, POSPREFIX + 3, 1 );
+        HEXCODE2 = SUBSTR( CONVERTED, POSPREFIX + 4, 1 );
+        HEXCODE3 = SUBSTR( CONVERTED, POSPREFIX + 5, 1 );
+        IF ( ( HEXCODE1 <> ';' ) AND ( STRPOS( HEXCODE1, HEXTABLE ) <> 0 ) AND
+             ( ( HEXCODE2 = ';' )  OR
+               ( ( HEXCODE3 = ';' ) AND
+                 ( STRPOS( HEXCODE2, HEXTABLE ) <> 0 ) ) ) ) THEN
+        BEGIN
+          IF ( HEXCODE2 = ';' ) THEN
+            CONVERTED = STRREPLACE( CONVERTED,
+              HEXPREFIX || HEXCODE1 || HEXCODE2,
+              CHR( STRPOS( HEXCODE1, HEXTABLE ) - 1) );
+          ELSE
+            CONVERTED = STRREPLACE( CONVERTED,
+              HEXPREFIX || HEXCODE1 || HEXCODE2 || HEXCODE3,
+              CHR( 16*( STRPOS( HEXCODE1, HEXTABLE ) - 1 ) + ( STRPOS( HEXCODE2, HEXTABLE ) - 1 ) ) );
+        END ELSE
+        BEGIN
+          TEXT = TEXT || SUBSTR( CONVERTED, 1, POSPREFIX + 2 );
+          CONVERTED = SUBSTR( CONVERTED, POSPREFIX + 3, STRLEN( CONVERTED )  );
+        END
+        POSPREFIX = STRPOS( HEXPREFIX, CONVERTED );
+      END
+      TEXT = TEXT || CONVERTED;
+    END
+    ELSE IF ( SUBSTR( FLAGS, 1, 1 ) = 'X' ) THEN
+    BEGIN
+      CONVERTED = STRREPLACE( ASTR, '&', '&amp;' );
+      CONVERTED = STRREPLACE( CONVERTED, '>', '&gt;' );
+      CONVERTED = STRREPLACE( CONVERTED, '<', '&lt;' );
+      CONVERTED = STRREPLACE( CONVERTED, '"', '&quot;' );
+      CONVERTED = STRREPLACE( CONVERTED, '''', '&apos;' );
+      IF ( STRPOS( 'e', FLAGS ) = 0 ) THEN
+        TEXT = CONVERTED;
+      ELSE
+      BEGIN
+        CURRENTPOS = 1;
+        WHILE ( CURRENTPOS <= STRLEN( CONVERTED ) ) DO
+        BEGIN
+          TEXTSYMBOL = SUBSTR( CONVERTED, CURRENTPOS, 1 );
+          IF ( ORD( TEXTSYMBOL ) <= 31 ) THEN
+            TEXT = TEXT || HEXPREFIX || FLOATTOSTR( ORD( TEXTSYMBOL ), '%X' ) || ';';
+          ELSE
+            TEXT = TEXT || TEXTSYMBOL;
+          CURRENTPOS = CURRENTPOS + 1;
+        END
+      END
+    END
+  END
+END;

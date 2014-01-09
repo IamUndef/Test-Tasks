@@ -1,0 +1,60 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{7389527B-1DBC-4865-A0F0-8590CFA7011F}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="COM\UniqueName.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="server\Server.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="client\Client.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="UniqueName">
+        <MSBuild Projects="COM\UniqueName.dproj"/>
+    </Target>
+    <Target Name="UniqueName:Clean">
+        <MSBuild Projects="COM\UniqueName.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UniqueName:Make">
+        <MSBuild Projects="COM\UniqueName.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Server">
+        <MSBuild Projects="server\Server.dproj"/>
+    </Target>
+    <Target Name="Server:Clean">
+        <MSBuild Projects="server\Server.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Server:Make">
+        <MSBuild Projects="server\Server.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Client">
+        <MSBuild Projects="client\Client.dproj"/>
+    </Target>
+    <Target Name="Client:Clean">
+        <MSBuild Projects="client\Client.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Client:Make">
+        <MSBuild Projects="client\Client.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="UniqueName;Server;Client"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="UniqueName:Clean;Server:Clean;Client:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="UniqueName:Make;Server:Make;Client:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
