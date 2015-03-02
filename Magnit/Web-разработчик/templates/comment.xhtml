@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html
+        PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+        "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+    <title>Добавление комментария</title>
+</head>
+<body>
+    <script type="text/javascript">
+        function changeRegion(regionSelect) {{
+            var value = regionSelect.options[regionSelect.selectedIndex].value;
+            if (value) {{
+                var citySelect = document.commentForm.city;
+                if (citySelect.options) {{
+                    while (citySelect.options.length) {{
+                        citySelect.remove(0);
+                    }}
+                }}
+                var ajax = {{
+                    request: function(method, url, regionId) {{
+                        var self = this;
+                        this.xhr = null;
+                        if (window.ActiveXObject) {{
+                            this.xhr = new ActiveXObject('Microsoft.XMLHTTP');
+                        }} else if (window.XMLHttpRequest) {{
+                            this.xhr = new XMLHttpRequest();
+                        }}
+                        if (this.xhr) {{
+                            this.xhr.onreadystatechange = function() {{
+                                if (self.xhr.readyState == 4) {{
+                                    if (self.xhr.status == 200) {{
+                                        loadCities(JSON.parse(self.xhr.responseText));
+                                    }} else {{
+                                        loadCities([])
+                                    }}
+                                }}
+                            }};
+                            if (method == 'get') {{
+                                this.xhr.open(method, url + '?id=' + regionId, true);
+                                this.xhr.send();
+                            }} else {{
+                                this.xhr.open(method, url, true);
+                                this.xhr.send('id=' + regionId);
+                            }}
+                        }}
+                        return this;
+                    }}}}.request('post', '/region', value)
+            }}
+        }}
+
+        function loadCities(cities) {{
+            var citySelect = document.commentForm.city;
+            var option = document.createElement('option');
+            option.text = 'Выберите город';
+            citySelect.appendChild(option);
+            for (var i=0; i < cities.length; ++i) {{
+                option = document.createElement('option');
+                option.value = cities[i][0];
+                option.text = cities[i][1];
+                citySelect.appendChild(option);
+            }}
+        }}
+
+        function validateForm() {{
+            var result = true;
+            var lastName = document.commentForm.lastName.value.trim();
+            if (!lastName) {{
+                document.commentForm.lastName.style.background = 'red';
+                result = false;
+            }} else {{
+                document.commentForm.lastName.style.background = 'white';
+            }}
+            var firstName = document.commentForm.firstName.value.trim();
+            if (!firstName) {{
+                document.commentForm.firstName.style.background = 'red';
+                result = false;
+            }} else {{
+                document.commentForm.firstName.style.background = 'white';
+            }}
+            var phone = document.commentForm.phone.value.trim();
+            if (phone && !/^\(\d{{3,5}}\)\s*\d{{5,}}$/.test(phone)) {{
+                document.commentForm.phone.style.background = 'red';
+                result = false;
+            }} else {{
+                document.commentForm.phone.style.background = 'white';
+            }}
+            var email = document.commentForm.email.value.trim();
+            if (email && !/^[_A-Za-z0-9-\+]+(\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\.[A-Za-z0-9]+)*(\.[A-Za-z]{{2,}})$/.test(email)) {{
+                document.commentForm.email.style.background = 'red';
+                result = false;
+            }} else {{
+                document.commentForm.email.style.background = 'white';
+            }}
+            var comment = document.commentForm.comment.value.trim();
+            if (!comment) {{
+                document.commentForm.comment.style.background = 'red';
+                result = false;
+            }} else {{
+                document.commentForm.comment.style.background = 'white';
+            }}
+            return result;
+        }}
+    </script>
+    <div align="center"><a href="/index.html">На главную страницу</a></div>
+    <h1 align="center">Добавление комментария</h1>
+    <h2 align="center" style="color: green">{success}</h2>
+    <form name="commentForm" action="/comment/add" method="post" onsubmit="return validateForm();">
+        <div align="center">
+            <ul style="list-style: none; padding: 0; margin: 0">
+                <li>
+                    <label style="font-weight: bold">Фамилия<span style="color: red">*</span></label>
+                    <div>
+                        <input type="text" id="lastName" name="lastName" size="30" maxlength="30"/>
+                    </div>
+                </li>
+                <li>
+                    <label style="font-weight: bold">Имя<span style="color: red">*</span></label>
+                    <div>
+                        <input type="text" id="firstName" name="firstName" size="30" maxlength="30"/>
+                    </div>
+                </li>
+                <li>
+                    <label style="font-weight: bold">Отчество</label>
+                    <div>
+                        <input type="text" id="patrName" name="patrName" size="30" maxlength="30"/>
+                    </div>
+                </li>
+                <li>
+                    <label style="font-weight: bold">Регион</label>
+                    <div>
+                        <select style="width: 200px" id="region" name="region" onchange="changeRegion(this)">
+                            <option>Выберите регион</option>
+                            {regions}
+                        </select>
+                    </div>
+                </li>
+                <li>
+                    <label style="font-weight: bold">Город</label>
+                    <div>
+                        <select style="width: 200px" id="city" name="city">
+                            <option>Выберите город</option>
+                        </select>
+                    </div>
+                </li>
+                <li>
+                    <label style="font-weight: bold">Телефон</label>
+                    <div>
+                        <input type="text" id="phone" name="phone" size="30" maxlength="20"/>
+                    </div>
+                </li>
+                <li>
+                    <label style="font-weight: bold">Электронная почта</label>
+                    <div>
+                        <input type="text" id="email" name="email" size="30" maxlength="40"/>
+                    </div>
+                </li>
+                <li>
+                    <label style="font-weight: bold">Комментарий<span style="color: red">*</span></label>
+                    <div>
+                        <textarea id="comment" name="comment" rows="5" cols="30"></textarea>
+                    </div>
+                </li>
+            </ul>
+            <br/>
+            <div align="center"><input type="submit" value="Добавить"/></div>
+        </div>
+    </form>
+</body>
+</html>
